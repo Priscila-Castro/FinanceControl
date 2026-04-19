@@ -1,0 +1,15 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+* {
+  caret-color: transparent;
+}
+
+input, textarea {
+  caret-color: auto;
+}
