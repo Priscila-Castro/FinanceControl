@@ -44,7 +44,7 @@ Criado com foco em facilidade de uso no dia a dia — ideal para quem quer organ
 
 ```bash
 # Clonar o projeto
-git clone https://github.com/SEU-USUARIO/SEU-REPO.git
+git clone https://github.com/Priscila-Castro/FinanceControl.git
 
 # Entrar na pasta
 cd SEU-REPO
