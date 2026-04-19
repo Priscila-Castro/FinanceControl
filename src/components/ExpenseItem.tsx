@@ -9,6 +9,7 @@ interface Gasto {
 interface Props {
   gasto: Gasto;
   onRemove: (id: string) => void;
+  moeda: string;
 }
 
 const categoryColors: Record<string, string> = {
@@ -20,13 +21,16 @@ const categoryColors: Record<string, string> = {
   'Outros': 'bg-gray-600 text-white'
 };
 
-export default function ExpenseItem({ gasto, onRemove }: Props) {
+export default function ExpenseItem({ gasto, onRemove, moeda }: Props) {
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm flex justify-between items-start gap-4">
       <div className="flex-1">
         <div className="flex items-start justify-between mb-1">
           <p className="text-2xl font-bold text-gray-800">
-            R$ {gasto.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {gasto.valor.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: moeda || 'BRL'
+            })}
           </p>
           <span className={`px-3 py-1 rounded-lg text-sm font-medium ${categoryColors[gasto.categoria] || 'bg-gray-700 text-white'}`}>{gasto.categoria}
           </span>

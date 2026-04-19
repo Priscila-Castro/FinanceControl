@@ -11,9 +11,10 @@ interface Gasto {
 interface Props {
   gastos: Gasto[];
   onRemove: (id: string) => void;
+  moeda: string;
 }
 
-export default function ExpenseList({ gastos, onRemove }: Props) {
+export default function ExpenseList({ gastos, onRemove, moeda }: Props) {
   if (gastos.length === 0) {
     return (
       <div className="text-center py-12 text-gray-400">
@@ -29,6 +30,7 @@ export default function ExpenseList({ gastos, onRemove }: Props) {
           key={gasto.id}
           gasto={gasto}
           onRemove={onRemove}
+          moeda={moeda}
         />
       ))}
     </div>

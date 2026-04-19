@@ -12,7 +12,16 @@ interface Props {
   categorias: string[];
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  categoriaCustom: string;
+  setCategoriaCustom: (valor: string) => void;
+  moeda: string;
 }
+
+const simbolosMoeda: Record<string, string> = {
+  BRL: 'R$',
+  USD: '$',
+  EUR: '€'
+};
 
 export default function ExpenseForm({
   valor,
@@ -25,7 +34,10 @@ export default function ExpenseForm({
   setDescricao,
   categorias,
   onSubmit,
-  onCancel
+  onCancel,
+  moeda,
+  categoriaCustom,
+  setCategoriaCustom,
 }: Props) {
   return (
     <form
@@ -39,7 +51,7 @@ export default function ExpenseForm({
       {/* Valor */}
       <div>
         <label className="block text-gray-300 mb-1">
-          Valor (R$)
+          Valor ({simbolosMoeda[moeda] || 'R$'})
         </label>
         <input
           type="number"
@@ -70,6 +82,21 @@ export default function ExpenseForm({
             </option>
           ))}
         </select>
+        {categoria === 'Outros' && (
+          <div className="mt-3">
+            <label className="block text-gray-300 mb-1">
+              Nova categoria
+            </label>
+
+            <input
+              type="text"
+              value={categoriaCustom}
+              onChange={(e) => setCategoriaCustom(e.target.value)}
+              placeholder="Ex: Pets, Estudos..."
+              className="w-full p-3 bg-gray-900 border border-white/10 rounded-xl text-white"
+            />
+          </div>
+        )}
       </div>
 
       {/* Data */}

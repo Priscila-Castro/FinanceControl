@@ -67,12 +67,14 @@ export default function ExpenseChart({ gastos }: Props) {
       contentStyle={{
         backgroundColor: '#111827',
         border: 'none',
-        borderRadius: '10px',
-        color: 'white'
+        borderRadius: '12px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
       }}
+      labelStyle={{ color: '#9ca3af' }}
+      itemStyle={{ color: '#fff', fontWeight: 'bold' }}
     />
 
-    <Legend /> {/* 🔥 adiciona legenda */}
+    <Legend />
   </PieChart>
 </ResponsiveContainer>
     </div>
