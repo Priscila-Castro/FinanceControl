@@ -2,9 +2,10 @@ interface Props {
   total: number;
   nome: string;
   moeda: string;
+  onLogout: () => void;
 }
 
-export default function Header({ total, nome, moeda }: Props) {
+export default function Header({ total, nome, moeda, onLogout }: Props) {
 
   const formatarMoeda = (valor: number) => {
     return valor.toLocaleString('pt-BR', {
@@ -14,24 +15,23 @@ export default function Header({ total, nome, moeda }: Props) {
   };
 
   return (
-    <div className="mb-8">
-      <h1 className="text-2xl font-bold">
-        Olá, {nome} 👋
-      </h1>
+    <div className="flex justify-between items-start">
+      <div>
+        <h1 className="text-2xl font-bold">
+          Olá, {nome} 👋
+        </h1>
 
-      <p className="text-sm opacity-80">
-        Vamos cuidar das suas finanças hoje
-      </p>
-
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl overflow-hidden">
-        <p className="text-sm opacity-80 mb-1">
-          Gastos do mês
-        </p>
-
-        <p className="text-3xl font-bold">
-          {formatarMoeda(total)}
+        <p className="text-sm opacity-80">
+          Vamos cuidar das suas finanças hoje
         </p>
       </div>
+
+      <button
+        onClick={onLogout}
+        className="bg-red-500 hover:bg-red-400 px-4 py-2 rounded-xl text-white"
+      >
+        Sair
+      </button>
     </div>
   );
 }

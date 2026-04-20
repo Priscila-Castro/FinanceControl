@@ -3,6 +3,8 @@ import Header from '../components/Header';
 import ExpenseForm from '../components/ExpenseForm';
 import ExpenseList from '../components/ExpenseList';
 import ExpenseChart from '../components/ExpenseChart';
+import { supabase } from '../supabaseClient';
+import Auth from '../components/Auth';
 
 interface Gasto {
   id: string;
@@ -13,6 +15,7 @@ interface Gasto {
 }
 
 export default function App() {
+  const [session, setSession] = useState<any>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [valor, setValor] = useState('');
@@ -70,28 +73,6 @@ export default function App() {
   const [MesSelecionado, setMesSelecionado] = useState(
     new Date().toISOString().slice(0, 7)
   );
-  useEffect(() => {
-  const data = JSON.parse(localStorage.getItem('financeData') || '{}');
-
-  if (data[MesSelecionado]) {
-    setGastos(data[MesSelecionado].gastos || []);
-    setTotalRecebido(data[MesSelecionado].totalRecebido || '');
-  } else {
-    setGastos([]);
-    setTotalRecebido('');
-  }
-}, [MesSelecionado]);
-
-useEffect(() => {
-  const data = JSON.parse(localStorage.getItem('financeData') || '{}');
-
-  data[MesSelecionado] = {
-    gastos: gastos,
-    totalRecebido: TotalRecebido
-  };
-
-  localStorage.setItem('financeData', JSON.stringify(data));
-}, [gastos, TotalRecebido, MesSelecionado]);
 
 useEffect(() => {
   if (!nome) return;
@@ -156,6 +137,20 @@ useEffect(() => {
 }, [nome]);
 
 useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setSession(data.session);
+  });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
+
+useEffect(() => {
   const nomeSalvo = localStorage.getItem('nome');
 
   if (nomeSalvo) {
@@ -205,7 +200,7 @@ useEffect(() => {
     );
   }, [categorias, nome]);
 
-  const adicionarGasto = (e: React.FormEvent) => {
+  const adicionarGasto = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!valor || !categoria) return;
@@ -225,6 +220,20 @@ useEffect(() => {
       data,
       descricao
     };
+    try {
+     const user = (await supabase.auth.getUser()).data.user; 
+     await supabase.from('gastos').insert([
+        {
+          valor: novoGasto.valor,
+          categoria: novoGasto.categoria,
+          data: novoGasto.data,
+          descricao: novoGasto.descricao,
+          user_id: user?.id
+        }
+      ]);
+    } catch (err){
+      console.error('Erro ao salvar no Supabase:', err);
+    }
 
     setGastos([novoGasto, ...gastos]);
 
@@ -259,6 +268,95 @@ useEffect(() => {
 
   return data.toISOString().slice(0, 7);
 });
+
+  const buscarGastos = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+
+    const { data, error } = await supabase
+      .from('gastos')
+      .select('*')
+      .eq('user_id', user?.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar gastos:', error);
+      return;
+    }
+
+    setGastos(data || []);
+};
+
+  useEffect(() => {
+    if (session) {
+      buscarGastos();
+    }
+  }, [session]);
+
+useEffect(() => {
+  buscarGastos();
+}, []);
+
+useEffect(() => {
+  if (!nome) return;
+
+  const jaMigrou = localStorage.getItem(`migrou_${nome}`);
+  if (jaMigrou) return;
+
+  console.log('🚀 iniciando migração');
+
+  const data = JSON.parse(localStorage.getItem('financeData') || '{}');
+
+  const todosGastos: any[] = [];
+
+  // 🔹 Estrutura nova (com nome)
+  if (data[nome]) {
+    Object.values(data[nome]).forEach((mes: any) => {
+      mes?.gastos?.forEach((g: any) => {
+        todosGastos.push({
+          valor: g.valor,
+          categoria: g.categoria,
+          data: g.data,
+          descricao: g.descricao
+        });
+      });
+    });
+  }
+
+  // 🔹 Estrutura antiga (sem nome)
+  Object.values(data).forEach((mes: any) => {
+    if (mes?.gastos) {
+      mes.gastos.forEach((g: any) => {
+        todosGastos.push({
+          valor: g.valor,
+          categoria: g.categoria,
+          data: g.data,
+          descricao: g.descricao
+        });
+      });
+    }
+  });
+
+  console.log('📦 migrando total:', todosGastos);
+
+  if (todosGastos.length === 0) return;
+
+  const migrar = async () => {
+    const { error } = await supabase.from('gastos').insert(todosGastos);
+
+    if (!error) {
+      console.log('✅ migração concluída');
+      localStorage.setItem(`migrou_${nome}`, 'true');
+    } else {
+      console.error('❌ erro:', error);
+    }
+  };
+
+  migrar();
+}, [nome]);
+
+if (!session) {
+  return <Auth />;
+}
 
 
   if (!nome) {
@@ -437,7 +535,14 @@ return (
         </button>
 
         {/* Header */}
-        <Header total={totalMes} nome={nome} moeda={moeda} />
+        <Header 
+          total={totalMes} 
+          nome={nome} 
+          moeda={moeda}
+          onLogout={async () => {
+            await supabase.auth.signOut();
+          }} 
+        />
 
         {/* Saldo */}
         <div className="saldo-card bg-gray-800/80 backdrop-blur-md border border-white/10 p-6 rounded-2xl shadow-lg">
@@ -502,6 +607,9 @@ return (
         />
 
       </div>
+      <footer className="text-center text-gray-400 text-sm mt-10 pb-4">
+          Desenvolvido por PCastro © {new Date().getFullYear()}
+      </footer>
     </div>
   </>
 );
