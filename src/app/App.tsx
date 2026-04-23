@@ -15,12 +15,14 @@ interface Gasto {
 }
 
 export default function App() {
+  const [nomeUsuario, setNomeUsuario] = useState('');
   const [session, setSession] = useState<any>(null);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [valor, setValor] = useState('');
   const [categoria, setCategoria] = useState('');
   const [categoriaCustom, setCategoriaCustom] = useState('');
+  const [recorrente, setRecorrente] = useState(false);
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
   const [step, setStep] = useState(0);
   const steps = [
@@ -39,8 +41,6 @@ export default function App() {
 ];
   const [mostrarTour, setMostrarTour] = useState(false);
   const [descricao, setDescricao] = useState('');
-  const [nome, setNome] = useState('');
-  const [nomeTemp, setNomeTemp] = useState('');
   const [mostrarBoasVindas, setMostrarBoasVindas] = useState<boolean>(false);
   const formatarMoeda = (valor: number) => {
   return valor.toLocaleString('pt-BR', {
@@ -69,15 +69,40 @@ export default function App() {
     zIndex: 60,
   };
 };
-  const [TotalRecebido, setTotalRecebido] = useState<string>('');
+  const [recebidoPorMes, setRecebidoPorMes] = useState<Record<string, string>>({});
   const [MesSelecionado, setMesSelecionado] = useState(
     new Date().toISOString().slice(0, 7)
   );
 
 useEffect(() => {
-  if (!nome) return;
+  if (!session?.user) return;
 
-  const moedaSalva = localStorage.getItem(`moeda_${nome}`);
+  const jaViu = localStorage.getItem(`jaViuBoasVindas_${session.user.id}`);
+
+  if (!jaViu) {
+    // ✅ Espera o nome carregar antes de mostrar
+    const buscarNomeEMostrar = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('nome')
+        .eq('id', session.user.id)
+        .single();
+
+      if (data) {
+        setNomeUsuario(data.nome);
+      }
+
+      setMostrarBoasVindas(true);
+    };
+
+    buscarNomeEMostrar();
+  }
+}, [session]);
+
+useEffect(() => {
+  if (!session?.user) return;
+
+  const moedaSalva = localStorage.getItem(`moeda_${session.user.id}`);
 
   if (!moedaSalva) {
     setMostrarMoeda(true);
@@ -85,56 +110,25 @@ useEffect(() => {
     setMoeda(moedaSalva);
     setMostrarMoeda(false);
   }
-}, [nome]);
+}, [session]);
 
 useEffect(() => {
-  if (!nome) return;
+  if (!session?.user) return;
 
-  const data = JSON.parse(localStorage.getItem('financeData') || '{}');
+  const jaViu = localStorage.getItem(`jaViuBoasVindas_${session.user.id}`);
 
-  if (data[nome]?.[MesSelecionado]) {
-    setGastos(data[nome][MesSelecionado].gastos || []);
-    setTotalRecebido(data[nome][MesSelecionado].totalRecebido || '');
-  } else {
-    setGastos([]);
-    setTotalRecebido('');
+  if (!jaViu) {
+    setMostrarBoasVindas(true);
   }
-}, [MesSelecionado, nome]);
+}, [session]);
 
 useEffect(() => {
-  if (!nome) return;
+  if (!session?.user) return;
 
-  const data = JSON.parse(localStorage.getItem('financeData') || '{}');
-
-  if (!data[nome]) {
-    data[nome] = {};
-  }
-
-  data[nome][MesSelecionado] = {
-    gastos,
-    totalRecebido: TotalRecebido
-  };
-
-  localStorage.setItem('financeData', JSON.stringify(data));
-}, [gastos, TotalRecebido, MesSelecionado, nome]);
-
-const salvarNome = () => {
-  if (!nomeTemp) return;
-
-  localStorage.setItem('nome', nomeTemp);
-  setNome(nomeTemp);
-
-  // opcional: mostrar boas-vindas
-  setMostrarBoasVindas(true);
-};
-
-useEffect(() => {
-  if (!nome) return;
-
-  const viu = localStorage.getItem(`tour_${nome}`);
-
+  const viu = localStorage.getItem(`tour_${session.user.id}`);
   setMostrarTour(!viu);
-}, [nome]);
+}, [session]);
+
 
 useEffect(() => {
   supabase.auth.getSession().then(({ data }) => {
@@ -148,20 +142,6 @@ useEffect(() => {
   });
 
   return () => subscription.unsubscribe();
-}, []);
-
-useEffect(() => {
-  const nomeSalvo = localStorage.getItem('nome');
-
-  if (nomeSalvo) {
-    setNome(nomeSalvo);
-
-    const jaViu = localStorage.getItem(`jaViuBoasVindas_${nomeSalvo}`);
-
-    if (!jaViu) {
-      setMostrarBoasVindas(true);
-    }
-  }
 }, []);
 
   useEffect(() => {
@@ -181,76 +161,147 @@ useEffect(() => {
     'Outros'
   ]);
 
-  useEffect(() => {
-    if (!nome) return;
+//   useEffect(() => {
+//   if (!session?.user) return;
 
-    const categoriasSalvas = localStorage.getItem(`categorias_${nome}`);
+//   const categoriasSalvas = localStorage.getItem(
+//     `categorias_${session.user.id}`
+//   );
 
-    if (categoriasSalvas) {
-      setCategorias(JSON.parse(categoriasSalvas));
-    }
-  }, [nome]);
+//   if (categoriasSalvas) {
+//     setCategorias(JSON.parse(categoriasSalvas));
+//   }
+// }, [session]);
 
-  useEffect(() => {
-    if (!nome) return;
+// useEffect(() => {
+//   if (!session?.user) return;
 
-    localStorage.setItem(
-      `categorias_${nome}`,
-      JSON.stringify(categorias)
-    );
-  }, [categorias, nome]);
+//   localStorage.setItem(
+//     `categorias_${session.user.id}`,
+//     JSON.stringify(categorias)
+//   );
+// }, [categorias, session]);
+
+// Buscar categorias do Supabase
+useEffect(() => {
+  if (!session?.user) return;
+  buscarCategorias();
+}, [session]);
+
+const buscarCategorias = async () => {
+  const user = session?.user;
+
+  const { data, error } = await supabase
+    .from('categorias')
+    .select('*')
+    .eq('user_id', user?.id);
+
+  if (error) {
+    console.error('Erro ao buscar categorias:', error);
+    return;
+  }
+
+  const nomes = data?.map(c => c.nome) || [];
+
+  // Mantém as categorias padrão + as do utilizador
+  const categoriasPadrao = ['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Lazer', 'Outros'];
+  const todasCategorias = [...new Set([...categoriasPadrao, ...nomes])];
+
+  setCategorias(todasCategorias);
+};
 
   const adicionarGasto = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!valor || !categoria) return;
+  if (!valor || !categoria || !session?.user) return;
 
-    if (
-      categoria === 'Outros' &&
-      categoriaCustom &&
-      !categorias.includes(categoriaCustom)
-    ) {
-      setCategorias([...categorias, categoriaCustom]);
+  if (categoria === 'Outros' && categoriaCustom && !categorias.includes(categoriaCustom)) {
+  const user = session?.user;
+
+  await supabase.from('categorias').insert([{
+    nome: categoriaCustom,
+    user_id: user?.id
+  }]);
+
+  setCategorias([...categorias, categoriaCustom]);
+}
+
+  const novoGasto: Gasto = {
+    id: Date.now().toString(),
+    valor: parseFloat(valor),
+    categoria: categoria === 'Outros' ? categoriaCustom : categoria,
+    data,
+    descricao
+  };
+
+  try {
+  const user = session?.user;
+  if (!user) return;
+
+  const gastosParaSalvar: any[] = [];
+
+  if (recorrente) {
+    for (let i = 0; i < 6; i++) {
+      const novaData = new Date(data);
+      novaData.setMonth(novaData.getMonth() + i);
+
+      gastosParaSalvar.push({
+        valor: parseFloat(valor),
+        categoria: categoria === 'Outros' ? categoriaCustom : categoria,
+        data: novaData.toISOString().split('T')[0],
+        descricao,
+        user_id: user.id
+      });
     }
-
-    const novoGasto: Gasto = {
-      id: Date.now().toString(),
+  } else {
+    gastosParaSalvar.push({
       valor: parseFloat(valor),
       categoria: categoria === 'Outros' ? categoriaCustom : categoria,
       data,
-      descricao
-    };
-    try {
-     const user = (await supabase.auth.getUser()).data.user; 
-     await supabase.from('gastos').insert([
-        {
-          valor: novoGasto.valor,
-          categoria: novoGasto.categoria,
-          data: novoGasto.data,
-          descricao: novoGasto.descricao,
-          user_id: user?.id
-        }
-      ]);
-    } catch (err){
-      console.error('Erro ao salvar no Supabase:', err);
-    }
+      descricao,
+      user_id: user.id
+    });
+  }
 
-    setGastos([novoGasto, ...gastos]);
+  const { data: novosGastos, error } = await supabase
+    .from('gastos')
+    .insert(gastosParaSalvar)
+    .select();
 
-    setValor('');
-    setCategoria('');
-    setData(new Date().toISOString().split('T')[0]);
-    setDescricao('');
-    setCategoriaCustom('');
-    setMostrarFormulario(false);
-  };
+  if (error) throw error;
 
-  const removerGasto = (id: string) => {
+  setGastos([...(novosGastos || []), ...gastos]);
+
+  setValor('');
+  setCategoria('');
+  setDescricao('');
+  setCategoriaCustom('');
+  setRecorrente(false);
+  setMostrarFormulario(false); // fecha o formulário
+
+} catch (err) {
+  console.error('Erro ao salvar no Supabase:', err);
+}
+};
+
+  const removerGasto = async (id: string) => {
+  try {
+    await supabase.from('gastos').delete().eq('id', id);
+
     setGastos(gastos.filter(g => g.id !== id));
-  };
+  } catch (err) {
+    console.error('Erro ao remover:', err);
+  }
+};
 
-  const totalMes = gastos.reduce((acc, gasto) => acc + gasto.valor, 0);
-  const saldo = parseFloat(TotalRecebido || '0') - totalMes;
+  const gastosFiltrados = gastos.filter((gasto) => {
+  return gasto.data.startsWith(MesSelecionado);
+});
+
+  const totalMes = gastosFiltrados.reduce((acc, gasto) => acc + gasto.valor, 0);
+  const recebidoAtual = recebidoPorMes[MesSelecionado] || '0';
+
+  const saldo = parseFloat(recebidoAtual) - totalMes;
 
   function formatarMes(mes: string) {
   const [ano, mesNum] = mes.split('-');
@@ -262,6 +313,35 @@ useEffect(() => {
     year: 'numeric'
   });
 }
+
+const buscarRecebimentos = async () => {
+  const user = session?.user;
+
+  const { data, error } = await supabase
+    .from('recebimentos')
+    .select('*')
+    .eq('user_id', user?.id);
+
+  if (error) {
+    console.error('Erro ao buscar recebimentos:', error);
+    return;
+  }
+
+  const objeto = (data || []).reduce((acc, item) => {
+    return {
+      ...acc,
+      [item.mes]: String(item.valor)
+    };
+  }, {});
+
+  setRecebidoPorMes(objeto);
+};
+
+useEffect(() => {
+  if (session) {
+    buscarRecebimentos();
+  }
+}, [session]);
   const meses = Array.from({ length: 12 }, (_, i) => {
   const data = new Date();
   data.setMonth(data.getMonth() - i);
@@ -270,7 +350,7 @@ useEffect(() => {
 });
 
   const buscarGastos = async () => {
-    const user = (await supabase.auth.getUser()).data.user;
+    const user = session?.user;
 
     const { data, error } = await supabase
       .from('gastos')
@@ -286,109 +366,30 @@ useEffect(() => {
     setGastos(data || []);
 };
 
+const apagarConta = async () => {
+  const confirmacao = window.confirm('Tens a certeza? Esta ação é irreversível e apaga todos os teus dados.');
+  
+  if (!confirmacao) return;
+
+  const { error } = await supabase.rpc('delete_user');
+  
+  if (error) {
+    console.error('Erro ao apagar conta:', error);
+    return;
+  }
+
+  await supabase.auth.signOut();
+}
+
   useEffect(() => {
     if (session) {
       buscarGastos();
     }
   }, [session]);
 
-useEffect(() => {
-  buscarGastos();
-}, []);
-
-useEffect(() => {
-  if (!nome) return;
-
-  const jaMigrou = localStorage.getItem(`migrou_${nome}`);
-  if (jaMigrou) return;
-
-  console.log('🚀 iniciando migração');
-
-  const data = JSON.parse(localStorage.getItem('financeData') || '{}');
-
-  const todosGastos: any[] = [];
-
-  // 🔹 Estrutura nova (com nome)
-  if (data[nome]) {
-    Object.values(data[nome]).forEach((mes: any) => {
-      mes?.gastos?.forEach((g: any) => {
-        todosGastos.push({
-          valor: g.valor,
-          categoria: g.categoria,
-          data: g.data,
-          descricao: g.descricao
-        });
-      });
-    });
-  }
-
-  // 🔹 Estrutura antiga (sem nome)
-  Object.values(data).forEach((mes: any) => {
-    if (mes?.gastos) {
-      mes.gastos.forEach((g: any) => {
-        todosGastos.push({
-          valor: g.valor,
-          categoria: g.categoria,
-          data: g.data,
-          descricao: g.descricao
-        });
-      });
-    }
-  });
-
-  console.log('📦 migrando total:', todosGastos);
-
-  if (todosGastos.length === 0) return;
-
-  const migrar = async () => {
-    const { error } = await supabase.from('gastos').insert(todosGastos);
-
-    if (!error) {
-      console.log('✅ migração concluída');
-      localStorage.setItem(`migrou_${nome}`, 'true');
-    } else {
-      console.error('❌ erro:', error);
-    }
-  };
-
-  migrar();
-}, [nome]);
-
 if (!session) {
   return <Auth />;
 }
-
-
-  if (!nome) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-sm text-center">
-        <h1 className="text-xl font-bold mb-4">
-          Olá! 😊
-        </h1>
-
-        <p className="mb-4 text-gray-600">
-          Como você se chama?
-        </p>
-
-        <input
-          type="text"
-          value={nomeTemp}
-          onChange={(e) => setNomeTemp(e.target.value)}
-          className="w-full p-3 border-2 border-gray-200 rounded-xl mb-4"
-          placeholder="Digite seu nome"
-        />
-
-        <button
-          onClick={salvarNome}
-          className="w-full bg-blue-500 text-white py-3 rounded-xl font-semibold"
-        >
-          Começar
-        </button>
-      </div>
-    </div>
-  );
-  }
 
 return (
   <>
@@ -397,7 +398,7 @@ return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
         <div className="bg-gray-900 p-6 rounded-2xl shadow-lg max-w-sm text-center border border-white/10">
           <h2 className="text-xl font-bold mb-3 text-white">
-            Bem-vinda, {nome}! 💙
+            Bem-vinda, {nomeUsuario}! 💙
           </h2>
 
           <p className="text-gray-300 mb-4">
@@ -407,7 +408,7 @@ return (
           <button
             onClick={() => {
               setMostrarBoasVindas(false);
-              localStorage.setItem(`jaViuBoasVindas_${nome}`, 'true');
+              localStorage.setItem(`jaViuBoasVindas_${session?.user?.id}`, 'true');
             }}
             className="bg-blue-500 text-white px-6 py-2 rounded-xl"
           >
@@ -431,7 +432,7 @@ return (
         <button
           onClick={() => {
             setMostrarTour(false);
-            localStorage.setItem(`tour_${nome}`, 'true');
+            localStorage.setItem(`tour_${session?.user?.id}`, 'true');
           }}
           className="text-gray-400"
         >
@@ -440,11 +441,13 @@ return (
 
         <button
           onClick={() => {
+            if (!session?.user) return;
+
             if (step < steps.length - 1) {
               setStep(step + 1);
             } else {
               setMostrarTour(false);
-              localStorage.setItem(`tour_${nome}`, 'true');
+              localStorage.setItem(`tour_${session?.user?.id}`, 'true');
             }
           }}
           className="text-blue-400"
@@ -482,9 +485,12 @@ return (
           <button
             disabled={!moeda}
             onClick={() => {
-              localStorage.setItem(`moeda_${nome}`, moeda);
+              if (!moeda || !session?.user) return;
+
+              localStorage.setItem(`moeda_${session.user.id}`, moeda);
               setMostrarMoeda(false);
             }}
+
             className={`w-full py-3 rounded-xl font-semibold ${
               moeda
                 ? 'bg-blue-500 text-white'
@@ -523,25 +529,13 @@ return (
           </div>
         </div>
 
-        {/* Trocar usuário */}
-        <button
-          onClick={() => {
-            localStorage.removeItem('nome');
-            location.reload();
-          }}
-          className="w-full bg-blue-500 hover:bg-blue-400 active:scale-95 transition transform text-white py-3 rounded-xl shadow-lg"
-        >
-          Trocar usuário
-        </button>
-
         {/* Header */}
         <Header 
           total={totalMes} 
-          nome={nome} 
+          nome={nomeUsuario} 
           moeda={moeda}
-          onLogout={async () => {
-            await supabase.auth.signOut();
-          }} 
+          onLogout={async () => await supabase.auth.signOut()}
+          onApagarConta={apagarConta}
         />
 
         {/* Saldo */}
@@ -552,11 +546,36 @@ return (
 
           <input
             type="number"
-            value={TotalRecebido}
-            onChange={(e) => setTotalRecebido(e.target.value)}
-            placeholder="Ex: 3000 (seu salário)"
-            className="w-full p-3 bg-gray-900 border border-white/10 rounded-xl text-white placeholder-gray-400 mb-4"
-          />
+            value={recebidoPorMes[MesSelecionado] || ''}
+            onChange={async (e) => {
+              const novoValor = e.target.value;
+
+              console.log('digitando:', novoValor);
+    // 1. atualiza estado local
+            setRecebidoPorMes({
+              ...recebidoPorMes,
+              [MesSelecionado]: novoValor
+            });
+
+    // 2. salva no Supabase
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+
+    const { error } = await supabase.from('recebimentos').upsert([
+      {
+        user_id: user.id,
+        mes: MesSelecionado,
+        valor: parseFloat(novoValor)
+      }
+    ]);
+
+    if (error) {
+      console.error('Erro ao salvar recebimento:', error);
+    }
+  }}
+  placeholder="Ex: 3000 (seu salário)"
+  className="w-full p-3 bg-gray-900 border border-white/10 rounded-xl text-white placeholder-gray-400 mb-4"
+/>
 
           <div className="flex justify-between items-center">
             <span className="text-gray-300">Saldo restante:</span>
@@ -567,7 +586,7 @@ return (
         </div>
 
         {/* Gráfico */}
-        <ExpenseChart gastos={gastos} />
+        <ExpenseChart gastos={gastosFiltrados} />
 
         {/* Botão adicionar */}
         {!mostrarFormulario && (
@@ -596,12 +615,14 @@ return (
             onSubmit={adicionarGasto}
             onCancel={() => setMostrarFormulario(false)}
             moeda={moeda}
+            recorrente={recorrente}
+            setRecorrente={setRecorrente}
           />
         )}
 
         {/* Lista */}
         <ExpenseList
-          gastos={gastos}
+          gastos={gastosFiltrados}
           onRemove={removerGasto}
           moeda={moeda}
         />

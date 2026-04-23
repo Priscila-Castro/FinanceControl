@@ -15,6 +15,8 @@ interface Props {
   categoriaCustom: string;
   setCategoriaCustom: (valor: string) => void;
   moeda: string;
+  recorrente: boolean;
+  setRecorrente: (v: boolean) => void;
 }
 
 const simbolosMoeda: Record<string, string> = {
@@ -38,6 +40,8 @@ export default function ExpenseForm({
   moeda,
   categoriaCustom,
   setCategoriaCustom,
+  recorrente,
+  setRecorrente
 }: Props) {
   return (
     <form
@@ -126,6 +130,15 @@ export default function ExpenseForm({
           className="w-full p-3 bg-gray-900 border border-white/10 rounded-xl text-white placeholder-gray-400"
         />
       </div>
+
+      <label className="flex items-center gap-2 mt-2 text-sm">
+        <input
+          type="checkbox"
+          checked={recorrente}
+          onChange={(e) => setRecorrente(e.target.checked)}
+        />
+        Repetir por 6 meses
+      </label>
 
       {/* Botões */}
       <div className="flex gap-3 pt-2">

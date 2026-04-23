@@ -3,16 +3,10 @@ interface Props {
   nome: string;
   moeda: string;
   onLogout: () => void;
+  onApagarConta: () => void;
 }
 
-export default function Header({ total, nome, moeda, onLogout }: Props) {
-
-  const formatarMoeda = (valor: number) => {
-    return valor.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: moeda && moeda !== '' ? moeda : 'BRL'
-    });
-  };
+export default function Header({ total, nome, moeda, onLogout, onApagarConta }: Props) {
 
   return (
     <div className="flex justify-between items-start">
@@ -32,6 +26,12 @@ export default function Header({ total, nome, moeda, onLogout }: Props) {
       >
         Sair
       </button>
+      <button
+        onClick={onApagarConta}
+        className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded=x1 text-red-400 text-sm"
+      >
+        Apagar conta
+        </button>
     </div>
   );
 }
