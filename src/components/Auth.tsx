@@ -34,7 +34,7 @@ export default function Auth() {
     }
   }
 
-  alert('Conta criada! Verifique o email 📩');
+  alert('Conta criada com sucesso! 🎉');
 };
 
   return (
