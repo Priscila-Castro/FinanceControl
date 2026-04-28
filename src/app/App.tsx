@@ -129,6 +129,22 @@ useEffect(() => {
   setMostrarTour(!viu);
 }, [session]);
 
+useEffect(() => {
+  if (!session?.user) return;
+
+  const buscarNome = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('nome')
+      .eq('id', session.user.id)
+      .single();
+
+    if (data) setNomeUsuario(data.nome);
+  };
+
+  buscarNome();
+}, [session]);
+
 
 useEffect(() => {
   supabase.auth.getSession().then(({ data }) => {
@@ -534,7 +550,13 @@ return (
           total={totalMes} 
           nome={nomeUsuario} 
           moeda={moeda}
-          onLogout={async () => await supabase.auth.signOut()}
+          onLogout={async () => {
+            setNomeUsuario('');
+            setGastos([]);
+            setRecebidoPorMes({});
+            setCategorias(['Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Lazer', 'Outros']);
+            await supabase.auth.signOut();
+          }}
           onApagarConta={apagarConta}
         />
 
